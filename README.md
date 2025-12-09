@@ -13,7 +13,6 @@ By the end of this workshop, you will be able to:
 - Run tests locally and in CI
 - Debug failing tests and identify microservice issues
 
-This workshop provides a practical testing workflow for DevOps engineers.
 
 ## 2. Architecture Overview
 
@@ -65,7 +64,19 @@ curl -X POST http://localhost:8001/sum -H "Content-Type: application/json" -d '{
 
 Both commands should return valid JSON.
 
-## 4. Integration Test Exercises
+## 4. Prepare a Prompt for the AI to Explain the Testing Strategy
+
+Before starting any testing tasks, prepare a prompt for your AI assistant. This prompt will help you understand:
+
+- The types of tests you will write
+- Why each test type is important
+- How these test layers differ
+- What failures each layer is designed to detect
+
+The goal is to understand why you re doing what you re doing, not just doing it. 
+
+
+## 5. Integration Test Exercises
 
 All tests in this section belong under:
 
@@ -73,7 +84,7 @@ All tests in this section belong under:
 tests/integration/
 ```
 
-### Task 4.1 — Test GET /items
+### Task 5.1 — Test GET /items
 
 Create the file:
 
@@ -94,7 +105,7 @@ Run:
 pytest tests/integration/test_items.py -k get_items
 ```
 
-### Task 4.2 — Test GET /items/{id}
+### Task 5.2 — Test GET /items/{id}
 
 Add two tests:
 
@@ -111,7 +122,7 @@ Run:
 pytest tests/integration/test_items.py -k item
 ```
 
-### Task 4.3 — Test POST /items
+### Task 5.3 — Test POST /items
 
 POST a new item such as:
 
@@ -124,7 +135,7 @@ Assert:
 - Response includes `id`, `name`, `price`
 - Fetch `/items` again and ensure the item was added.
 
-### Task 4.4 — Test GET /total
+### Task 5.4 — Test GET /total
 
 Call `GET /total`
 
@@ -144,7 +155,7 @@ Run:
 pytest tests/integration/test_total.py
 ```
 
-## 5. Contract Test Exercises (Pact)
+## 6. Contract Test Exercises (Pact)
 
 Directory:
 
@@ -195,7 +206,7 @@ pytest tests/contract/test_sum_contract.py
 
 A pact file should be generated.
 
-## 6. Component Testing with Testcontainers
+## 7. Component Testing with Testcontainers
 
 Directory:
 
@@ -224,7 +235,7 @@ Run:
 pytest tests/component/test_service_a_component.py
 ```
 
-## 7. Run All Tests
+## 8. Run All Tests
 
 To run the entire test suite:
 
@@ -234,7 +245,7 @@ poetry run pytest
 
 All integration, contract, and component tests should pass.
 
-## 8. CI Integration (GitHub Actions)
+## 9. CI Integration (GitHub Actions)
 
 The CI workflow contains placeholders.
 
@@ -247,3 +258,42 @@ pytest tests/component
 ```
 
 Push to GitHub. CI should run all tests.
+
+## 10. AI-Assisted Feature Development - TDD 
+
+After completing all workshop testing tasks, use your AI assistant to implement a new feature based on your existing test suite.
+
+**Option A — Delete Item Endpoint**
+
+Add support for:
+
+```
+DELETE /items/{id}
+```
+
+Test expectations:
+- Deleting an existing item removes it
+- Deleting a missing item returns 404
+- `/total` recalculates correctly afterward
+
+**Option B — Average Price Endpoint**
+
+Add:
+
+```
+GET /average
+```
+
+Expected behavior:
+- Returns the average price
+- Handles empty tables properly
+- Fits cleanly into existing component tests
+
+**Option C — Input Validation Improvements in Service B**
+
+Modify `/sum` to:
+- Reject negative numbers
+- Reject missing fields
+- Reject non-numeric items
+
+This requires updating Pact contracts and integration tests.
