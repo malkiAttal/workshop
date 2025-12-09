@@ -1,0 +1,95 @@
+name: Microservice Testing CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: inventory
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd="pg_isready -U user -d inventory"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install Dependencies
+        run: poetry install
+
+      - name: Start Service B
+        run: |
+          nohup poetry run uvicorn service-b.main:app \
+            --host 0.0.0.0 --port 8001 &
+          sleep 4
+
+      - name: Verify Service B is reachable
+        run: |
+          for i in {1..10}; do
+            curl -X POST http://localhost:8001/sum \
+              -H "Content-Type: application/json" \
+              -d '{"numbers":[1,2]}' && break
+            echo "Waiting for Service B..."
+            sleep 2
+          done
+
+      - name: Start Service A
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/inventory
+          SERVICE_B_URL: http://localhost:8001
+        run: |
+          nohup poetry run uvicorn service-a.main:app \
+            --host 0.0.0.0 --port 8000 &
+          sleep 4
+
+      - name: Verify Service A is reachable
+        run: curl http://localhost:8000/items
+
+      # -------------------------------
+      # INTEGRATION TESTS
+      # -------------------------------
+      - name: Run integration tests
+        run: poetry run pytest tests/integration --maxfail=1 --disable-warnings
+
+      # -------------------------------
+      # PACT CONSUMER TEST
+      # -------------------------------
+      - name: Run Pact consumer tests
+        run: poetry run pytest tests/contract/test_sum_contract.py --maxfail=1
+
+      - name: Verify pact file was generated
+        run: test -f pacts/service-a-service-b.json
+
+      # -------------------------------
+      # PACT PROVIDER VERIFICATION
+      # -------------------------------
+      - name: Run Pact provider verification
+        run: poetry run pytest tests/contract/test_provider_verification.py
+
+      # -------------------------------
+      # COMPONENT TESTS
+      # -------------------------------
+      - name: Run component tests (Testcontainers)
+        run: poetry run pytest tests/component --maxfail=1
+
+      # -------------------------------
+      # SUMMARY
+      # -------------------------------
+      - name: Report success
+        run: echo "All tests and requirements passed."
