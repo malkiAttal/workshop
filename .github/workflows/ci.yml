@@ -39,12 +39,12 @@ jobs:
             --host 0.0.0.0 --port 8001 &
           sleep 4
 
-      - name: Verify Service B is reachable
+      - name: Verify Service B is running
         run: |
           for i in {1..10}; do
             curl -X POST http://localhost:8001/sum \
               -H "Content-Type: application/json" \
-              -d '{"numbers":[1,2]}' && break
+              -d '{"numbers":[1]}' && break
             echo "Waiting for Service B..."
             sleep 2
           done
@@ -61,35 +61,17 @@ jobs:
       - name: Verify Service A is reachable
         run: curl http://localhost:8000/items
 
-      # -------------------------------
-      # INTEGRATION TESTS
-      # -------------------------------
-      - name: Run integration tests
-        run: poetry run pytest tests/integration --maxfail=1 --disable-warnings
+      - name: Integration Tests
+        run: poetry run pytest tests/integration
 
-      # -------------------------------
-      # PACT CONSUMER TEST
-      # -------------------------------
-      - name: Run Pact consumer tests
-        run: poetry run pytest tests/contract/test_sum_contract.py --maxfail=1
+      - name: Pact Consumer Tests
+        run: poetry run pytest tests/contract/test_sum_contract.py
 
-      - name: Verify pact file was generated
+      - name: Verify Pact File Exists
         run: test -f pacts/service-a-service-b.json
 
-      # -------------------------------
-      # PACT PROVIDER VERIFICATION
-      # -------------------------------
-      - name: Run Pact provider verification
+      - name: Pact Provider Verification
         run: poetry run pytest tests/contract/test_provider_verification.py
 
-      # -------------------------------
-      # COMPONENT TESTS
-      # -------------------------------
-      - name: Run component tests (Testcontainers)
-        run: poetry run pytest tests/component --maxfail=1
-
-      # -------------------------------
-      # SUMMARY
-      # -------------------------------
-      - name: Report success
-        run: echo "All tests and requirements passed."
+      - name: Component Tests
+        run: poetry run pytest tests/component
