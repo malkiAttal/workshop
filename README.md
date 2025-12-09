@@ -1,222 +1,249 @@
-# 🧪 Microservice Automated Testing Workshop
+# Microservice Automated Testing Workshop
 
-> **Python + FastAPI + Postgres + Pact + Testcontainers**
-> **Duration:** ~4 hours
-> **Audience:** DevOps Engineers (Intermediate–Senior)
+**Python • FastAPI • PostgreSQL • Pact • Testcontainers**
 
----
+## 1. Workshop Objectives
 
-## 🧭 1. Workshop Goals
+By the end of this workshop, you will be able to:
 
-By the end of this session, you will be able to:
+- Write integration tests for microservices using HTTP requests
+- Write consumer contract tests using Pact
+- Write component tests using Testcontainers
+- Validate cross-service behavior
+- Run tests locally and in CI
+- Debug failing tests and identify microservice issues
 
-- ✅ Understand how DevOps interfaces with different layers of testing
-- ✅ Run and write integration, contract, and component tests
-- ✅ Test microservices with real databases and real service interactions
-- ✅ Use **Pact** for consumer-driven contract testing
-- ✅ Use **Testcontainers** to boot ephemeral test environments
-- ✅ Run tests locally and in CI
-- ✅ Debug failing microservices
+This workshop provides a practical testing workflow for DevOps engineers.
 
----
-
-## 🧱 2. Architecture Overview
+## 2. Architecture Overview
 
 ```
-Service A (Inventory)  --->  Service B (Math)
-      |                           ^
-      | SQL (Postgres)            |
-      +---------------------------+
+Service A (Inventory) ---> Service B (Math)
+        |
+        v
+   PostgreSQL
 ```
 
-### Service A (Inventory)
+### Service A
 
-- **Framework:** FastAPI
-- **Database:** PostgreSQL (using raw `psycopg2`)
-- **Purpose:** Stores items in Postgres
+- FastAPI application
+- Connects to PostgreSQL using raw psycopg2
 
-#### Endpoints:
+**Endpoints:**
+- `GET /items`
+- `GET /items/{id}`
+- `POST /items`
+- `GET /total` (calls Service B)
 
-| Method | Endpoint        | Description                    |
-|--------|-----------------|--------------------------------|
-| GET    | `/items`        | List all items                 |
-| GET    | `/items/{id}`   | Get specific item by ID        |
-| POST   | `/items`        | Create a new item              |
-| GET    | `/total`        | Get total sum from Service B   |
+### Service B
 
-### Service B (Math)
+- FastAPI application
 
-- **Framework:** FastAPI
-- **Purpose:** Computes sums
+**Endpoint:**
+- `POST /sum`
 
-#### Endpoints:
+**Returns:**
+- `total`
+- `count`
+- `processed_at` (UTC timestamp)
+- `version`
 
-| Method | Endpoint | Description                                           |
-|--------|----------|-------------------------------------------------------|
-| POST   | `/sum`   | Returns enriched data including `processed_at` (UTC)  |
+## 3. Starting the Environment
 
----
-
-## 🐳 3. Start the Environment
-
-From the project root:
+Run:
 
 ```bash
 docker compose up -d --build
 ```
 
-### Verify endpoints:
+Verify the services:
 
 ```bash
-# Test Service A
 curl http://localhost:8000/items
-
-# Test Service B
-curl -X POST http://localhost:8001/sum \
-  -H "Content-Type: application/json" \
-  -d '{"numbers":[1,2]}'
+curl -X POST http://localhost:8001/sum -H "Content-Type: application/json" -d '{"numbers":[1,2]}'
 ```
 
-**Expected results:**
-- `/items` → Returns `apple` + `banana`
-- `/sum` → Returns JSON with `total`, `count`, `processed_at`, `version`
+Both commands should return valid JSON.
 
----
+## 4. Integration Test Exercises
 
-## 🧪 4. Integration Testing Exercises
+All tests in this section belong under:
 
-**Write your tests in:** `tests/integration/`
+```
+tests/integration/
+```
 
-### ✔ Exercise 4.1 — Test GET /items
+### Task 4.1 — Test GET /items
 
-**Assertions:**
-- Status code `200`
-- Response is a list
-- Contains `apple` + `banana`
+Create the file:
 
-### ✔ Exercise 4.2 — Test GET /items/{id}
+```
+tests/integration/test_items.py
+```
 
-**Test cases:**
-- `/items/1` returns item
-- `/items/9999` returns `404`
+Implement a test that:
 
-### ✔ Exercise 4.3 — Test POST /items
+- Sends `GET /items`
+- Asserts status code is 200
+- Asserts the response is a list
+- Confirms the list contains the two seeded items ("apple" and "banana")
 
-**Steps:**
-1. Create `{"name": "orange", "price": 3.1}`
-2. Assert `201` status
-3. Assert item fields exist
-4. GET `/items` again → ensure new item persists
+Run:
 
-### ✔ Exercise 4.4 — Test GET /total
+```bash
+pytest tests/integration/test_items.py -k get_items
+```
 
-This endpoint:
-- Reads all item prices from DB
-- Calls Service B `/sum`
-- Returns enriched structure
+### Task 4.2 — Test GET /items/{id}
 
-**Your test should assert:**
-- Keys: `total`, `count`, `processed_at`, `version`
-- `count` equals number of DB rows
-- `total > 0`
+Add two tests:
 
----
+**Test 1:** `GET /items/1`
+- Assert 200
+- Assert the returned JSON contains `id`, `name`, `price`
 
-## 🔗 5. Contract Testing Exercises (Pact)
+**Test 2:** `GET /items/99999`
+- Assert 404
 
-**Directory:** `tests/contract/test_sum_contract.py`
+Run:
 
-### Goal:
-Define a consumer contract for `POST /sum`
+```bash
+pytest tests/integration/test_items.py -k item
+```
 
-**Expected fields:**
+### Task 4.3 — Test POST /items
+
+POST a new item such as:
+
+```json
+{"name": "orange", "price": 3.1}
+```
+
+Assert:
+- Status 201
+- Response includes `id`, `name`, `price`
+- Fetch `/items` again and ensure the item was added.
+
+### Task 4.4 — Test GET /total
+
+Call `GET /total`
+
+Assert that the returned JSON contains the following keys:
 - `total`
 - `count`
 - `processed_at`
 - `version`
 
-### High-level steps:
+Assert:
+- `count` matches the number of rows in the database
+- `total` is greater than zero
 
-1. Configure Pact mock server
-2. Define provider expectations
-3. Trigger request from Service A consumer test
-4. Assert on schema
-5. Generate the pact file
+Run:
 
-> **Note:** Later (in solution branch), you will run the provider verification.
+```bash
+pytest tests/integration/test_total.py
+```
 
----
+## 5. Contract Test Exercises (Pact)
 
-## 🧱 6. Component Testing (Testcontainers)
+Directory:
 
-**Directory:** `tests/component/test_service_a_component.py`
+```
+tests/contract/
+```
 
-### Goal:
+Create the file:
 
-Use **Testcontainers** to simulate a real microservice environment without Docker Compose.
+```
+tests/contract/test_sum_contract.py
+```
 
-**Steps:**
-1. Use Testcontainers to run a real ephemeral Postgres
-2. Create the `items` table
-3. Insert 2 fake items
-4. Boot Service A (pointed at Testcontainers DB)
-5. Assert `/items` returns expected results
+Your tasks:
 
----
+- Set up a Pact mock provider listening on port 1234
+- Define the expected request:
 
-## 🤖 7. Run All Tests
+```json
+{"numbers": [1.5, 2.0]}
+```
+
+- Define the expected response:
+
+```json
+{
+  "total": 3.5,
+  "count": 2,
+  "processed_at": "<ISO timestamp>",
+  "version": "1.0"
+}
+```
+
+- Implement the Pact interactions:
+  - `.given(...)`
+  - `.upon_receiving(...)`
+  - `.with_request(...)`
+  - `.will_respond_with(...)`
+
+- Send a POST request to the mock server
+- Assert that the response matches the expected fields
+
+Run:
+
+```bash
+pytest tests/contract/test_sum_contract.py
+```
+
+A pact file should be generated.
+
+## 6. Component Testing with Testcontainers
+
+Directory:
+
+```
+tests/component/
+```
+
+Create the file:
+
+```
+tests/component/test_service_a_component.py
+```
+
+Your tasks:
+
+- Start a Postgres test container using Testcontainers
+- Connect to it and create the items table
+- Insert two test rows
+- Start Service A as a subprocess, pointing it to the Testcontainers DB
+- Call `GET /items` on the test instance
+- Assert that the returned items match what you inserted
+
+Run:
+
+```bash
+pytest tests/component/test_service_a_component.py
+```
+
+## 7. Run All Tests
+
+To run the entire test suite:
 
 ```bash
 poetry run pytest
 ```
 
-**Expected results:**
-- ✅ Integration tests → PASS
-- ✅ Pact contract test → generates `.json` file
-- ✅ Component test → PASS
+All integration, contract, and component tests should pass.
 
----
+## 8. CI Integration (GitHub Actions)
 
-## 🚦 8. CI (GitHub Actions)
+The CI workflow contains placeholders.
 
-In the main branch, CI contains placeholder steps:
+Update these lines:
 
-```yaml
-echo "TODO: pytest tests/integration"
+```bash
+pytest tests/integration
+pytest tests/contract
+pytest tests/component
 ```
 
-### Your task:
-
-1. Replace placeholders with real `pytest` commands
-2. Push to GitHub
-3. CI should run your tests
-
----
-
-## 🧠 9. Debugging Tips
-
-### Common issues:
-
-- ❌ Postgres not ready
-- ❌ Wrong `DATABASE_URL`
-- ❌ Service B unreachable
-- ❌ Pact mock server not started properly
-- ❌ Component test port conflicts
-
-### Tips:
-
-- 💡 Use `docker logs` to inspect container output
-- 💡 Run `curl` to isolate failing endpoints
-- 💡 Add `print()` statements in tests to inspect data
-
----
-
-## 🎉 That's it!
-
-You now have the foundation to test microservices the way DevOps engineers do every day:
-
-- ✨ **Real services**
-- ✨ **Real databases**
-- ✨ **Real contracts**
-
-Happy testing! 🚀
+Push to GitHub. CI should run all tests.
