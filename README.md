@@ -73,7 +73,7 @@ Before starting any testing tasks, prepare a prompt for your AI assistant. This 
 - How these test layers differ
 - What failures each layer is designed to detect
 
-The goal is to understand why you re doing what you re doing, not just doing it. 
+The goal is to understand why you re doing what you re doing, not just doing it.
 
 
 ## 5. Integration Test Exercises
@@ -259,9 +259,58 @@ pytest tests/component
 
 Push to GitHub. CI should run all tests.
 
-## 10. AI-Assisted Feature Development - TDD 
+## 10. AI-Assisted Feature Development - TDD
 
 After completing all workshop testing tasks, use your AI assistant to implement a new feature based on your existing test suite.
+
+### Using Spec-Kit for TDD Feature Development (Recommended)
+
+Now that you've learned testing patterns, consider using **spec-kit** to drive your feature development using Test-Driven Development. Spec-kit enables spec-driven development where you define **what** you want to build before focusing on **how** to build it.
+
+#### Installation
+
+Install spec-kit using `uv`:
+
+```bash
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+```
+
+Or use it one-time without installation:
+
+```bash
+uvx --from git+https://github.com/github/spec-kit.git specify init workshop-feature
+```
+
+#### Spec-Kit TDD Workflow
+
+Once installed, initialize your feature:
+
+```bash
+specify init workshop-feature
+```
+
+Follow the spec-kit workflow for your chosen feature:
+
+1. **Create principles** (`/speckit.constitution`): Establish testing principles based on what you learned (integration, contract, component tests)
+2. **Write specifications** (`/speckit.specify`): Describe your feature requirements and expected behavior
+3. **Plan implementation** (`/speckit.plan`): Design how to implement the feature with proper test coverage
+4. **Create tasks** (`/speckit.tasks`): Generate actionable TDD tasks (write test first, then implementation)
+5. **Execute** (`/speckit.implement`): Build the feature following TDD principles
+
+#### Why Spec-Kit for TDD?
+
+- Ensures you think through test requirements before implementation
+- Generates structured test plans covering all test layers
+- Enforces the "test-first" approach
+- Documents your feature specifications clearly
+
+Learn more at: https://github.com/github/spec-kit
+
+---
+
+### Feature Options
+
+Choose one of the following features to implement:
 
 **Option A — Delete Item Endpoint**
 
